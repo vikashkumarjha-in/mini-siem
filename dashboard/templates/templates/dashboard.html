@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini-SIEM Live Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+    <main class="container">
+        <header>
+            <div>
+                <h1>Mini-SIEM Live Dashboard</h1>
+                <p>Real-Time Log Analysis and Threat Detection</p>
+            </div>
+
+            <div class="live-status">
+                <span class="live-dot"></span>
+                Live monitoring
+            </div>
+        </header>
+
+        <section class="cards">
+            <article class="card">
+                <span>Total Events</span>
+                <strong id="total-events">0</strong>
+            </article>
+
+            <article class="card">
+                <span>Total Alerts</span>
+                <strong id="total-alerts">0</strong>
+            </article>
+
+            <article class="card">
+                <span>High Alerts</span>
+                <strong id="high-alerts" class="danger">0</strong>
+            </article>
+
+            <article class="card">
+                <span>Suspicious IPs</span>
+                <strong id="suspicious-ips">0</strong>
+            </article>
+        </section>
+
+        <section class="panel">
+            <h2>Live Threat Alerts</h2>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>IP Address</th>
+                            <th>Source</th>
+                            <th>Rule</th>
+                            <th>Evidence</th>
+                            <th>Score</th>
+                            <th>Severity</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="alerts-body">
+                        <tr>
+                            <td colspan="7">Loading alerts...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="chart-grid">
+            <section class="panel">
+                <h2>HTTP 404 Responses by IP</h2>
+                <div id="web-chart"></div>
+            </section>
+
+            <section class="panel">
+                <h2>Alerts by Severity</h2>
+                <div id="severity-chart"></div>
+            </section>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
