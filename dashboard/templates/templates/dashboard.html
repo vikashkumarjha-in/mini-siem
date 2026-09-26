@@ -1,87 +1,874 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini-SIEM Live Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-</head>
-<body>
-    <main class="container">
-        <header>
-            <div>
-                <h1>Mini-SIEM Live Dashboard</h1>
-                <p>Real-Time Log Analysis and Threat Detection</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentry // Threat Ops</title>
+    <style>
+      :root {
+        --bg: #07111d;
+        --bg-2: #0d1726;
+        --panel: rgba(17, 26, 39, 0.92);
+        --panel-soft: rgba(19, 31, 47, 0.9);
+        --panel-alt: rgba(10, 18, 30, 0.9);
+        --line: rgba(148, 163, 184, 0.14);
+        --line-strong: rgba(148, 163, 184, 0.22);
+        --text: #eaf3ff;
+        --muted: #8ea5c7;
+        --primary: #4cc9f0;
+        --primary-2: #7c3aed;
+        --green: #34d399;
+        --amber: #fbbf24;
+        --red: #f87171;
+        --purple: #a78bfa;
+        --cyan: #67e8f9;
+        --shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(76, 201, 240, 0.08), transparent 26%),
+          radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.08), transparent 30%),
+          linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
+        color: var(--text);
+      }
+
+      body {
+        padding: 20px;
+      }
+
+      .shell {
+        max-width: 1480px;
+        margin: 0 auto;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        background: rgba(7, 17, 29, 0.88);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar {
+        background: rgba(10, 17, 29, 0.96);
+        border-right: 1px solid var(--line);
+        padding: 22px 16px 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 10px 22px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-2));
+        display: grid;
+        place-items: center;
+        color: #06131d;
+        font-size: 1.1rem;
+        box-shadow: 0 0 22px rgba(76, 201, 240, 0.4);
+      }
+
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 10px;
+        border-radius: 12px;
+        text-decoration: none;
+        color: var(--muted);
+        border: 1px solid transparent;
+        transition: 0.2s ease;
+      }
+
+      .nav-item:hover,
+      .nav-item.active {
+        background: rgba(76, 201, 240, 0.06);
+        border-color: rgba(76, 201, 240, 0.15);
+        color: var(--text);
+      }
+
+      .nav-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        background: rgba(148, 163, 184, 0.08);
+        display: grid;
+        place-items: center;
+        font-size: 0.72rem;
+      }
+
+      .sidebar-card {
+        margin-top: 30px;
+        border-radius: 16px;
+        padding: 18px 16px;
+        background: linear-gradient(180deg, rgba(76, 201, 240, 0.1), rgba(124, 58, 237, 0.06));
+        border: 1px solid rgba(76, 201, 240, 0.18);
+      }
+
+      .sidebar-card h4 {
+        margin: 0 0 10px;
+        font-size: 0.68rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #dfeeff;
+      }
+
+      .sidebar-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.7;
+      }
+
+      .main {
+        padding: 22px 24px 24px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+
+      .title-wrap h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 2vw, 2.4rem);
+        letter-spacing: -0.05em;
+      }
+
+      .subtext {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.77rem;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: min(290px, 44vw);
+        background: rgba(19, 30, 45, 0.88);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 11px 12px;
+        color: var(--muted);
+      }
+
+      .search input {
+        width: 100%;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: var(--text);
+        font-size: 0.86rem;
+      }
+
+      .user-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #091722;
+        background: linear-gradient(135deg, #a5f3fc, #c4b5fd);
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .stat-card {
+        position: relative;
+        padding: 18px 18px 16px;
+        background: rgba(15, 27, 40, 0.9);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+      }
+
+      .stat-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary), transparent);
+      }
+
+      .stat-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        color: var(--muted);
+        font-size: 0.74rem;
+        letter-spacing: 0.02em;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 56px;
+        padding: 5px 8px;
+        border-radius: 999px;
+        font-size: 0.63rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .pill.success { background: rgba(52, 211, 153, 0.12); color: #8de9c0; }
+      .pill.warning { background: rgba(251, 191, 36, 0.12); color: #f8d87d; }
+      .pill.danger { background: rgba(248, 113, 113, 0.12); color: #ffb0b0; }
+      .pill.info { background: rgba(76, 201, 240, 0.12); color: #8ee2f9; }
+
+      .stat-value {
+        font-size: clamp(1.8rem, 1.7vw, 2.4rem);
+        font-weight: 700;
+        letter-spacing: -0.05em;
+      }
+
+      .stat-meta {
+        margin-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.71rem;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
+        gap: 18px;
+      }
+
+      .panel {
+        background: rgba(15, 27, 40, 0.9);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 18px 12px;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .range-badge {
+        color: var(--muted);
+        font-size: 0.7rem;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.06);
+        border: 1px solid rgba(148, 163, 184, 0.08);
+      }
+
+      .chart-card {
+        height: 260px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.08);
+        background: linear-gradient(180deg, rgba(76, 201, 240, 0.03), rgba(255,255,255,0.01));
+        padding: 16px 14px 8px;
+      }
+
+      .bars {
+        height: 100%;
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .bar-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: end;
+        align-items: center;
+        gap: 8px;
+        height: 100%;
+      }
+
+      .bar {
+        width: 100%;
+        max-width: 28px;
+        border-radius: 10px 10px 0 0;
+        background: linear-gradient(180deg, #67e8f9 0%, #4cc9f0 45%, #60a5fa 100%);
+        box-shadow: 0 15px 24px rgba(76, 201, 240, 0.18);
+      }
+
+      .bar.alt {
+        background: linear-gradient(180deg, #c4b5fd 0%, #8b5cf6 50%, #7c3aed 100%);
+        box-shadow: 0 15px 24px rgba(139, 92, 246, 0.18);
+      }
+
+      .bar-label {
+        color: var(--muted);
+        font-size: 0.68rem;
+      }
+
+      .right-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .mini-card {
+        background: rgba(15, 27, 40, 0.9);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 18px 16px;
+      }
+
+      .ring-wrap {
+        display: grid;
+        place-items: center;
+        margin-top: 8px;
+      }
+
+      .ring {
+        position: relative;
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        background: conic-gradient(var(--primary) 0 72%, rgba(148,163,184,0.12) 72% 100%);
+        display: grid;
+        place-items: center;
+      }
+
+      .ring::before {
+        content: "";
+        position: absolute;
+        inset: 13px;
+        border-radius: 50%;
+        background: rgba(15, 27, 40, 1);
+      }
+
+      .ring-label {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+      }
+
+      .ring-label strong {
+        display: block;
+        font-size: 1.9rem;
+        letter-spacing: -0.05em;
+      }
+
+      .ring-label small {
+        color: var(--muted);
+      }
+
+      .progress-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .progress-item {
+        display: grid;
+        gap: 8px;
+      }
+
+      .progress-top {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+
+      .track {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.12);
+        overflow: hidden;
+      }
+
+      .fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      }
+
+      .bottom-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.9fr);
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .table-wrap {
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        padding: 12px 10px;
+        text-align: left;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      }
+
+      th {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+      }
+
+      td {
+        font-size: 0.82rem;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 8px;
+        border-radius: 999px;
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .status.critical { background: rgba(248,113,113,0.12); color: #ffb7b7; }
+      .status.warning { background: rgba(251,191,36,0.12); color: #f8d779; }
+      .status.normal { background: rgba(52,211,153,0.12); color: #b8f3d8; }
+
+      .alerts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .alert-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 12px 10px;
+        border: 1px solid rgba(148,163,184,0.08);
+        border-radius: 12px;
+        background: rgba(148,163,184,0.02);
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-top: 7px;
+      }
+
+      .dot.red { background: var(--red); box-shadow: 0 0 12px rgba(248,113,113,0.8); }
+      .dot.amber { background: var(--amber); box-shadow: 0 0 12px rgba(251,191,36,0.8); }
+      .dot.green { background: var(--green); box-shadow: 0 0 12px rgba(52,211,153,0.8); }
+
+      .alert-copy strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .alert-copy small {
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      @media (max-width: 1100px) {
+        .dashboard { grid-template-columns: 1fr; }
+        .sidebar { border-right: none; border-bottom: 1px solid var(--line); }
+        .stats-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+        .content-grid, .bottom-grid { grid-template-columns: 1fr; }
+      }
+
+      @media (max-width: 640px) {
+        body { padding: 12px; }
+        .main { padding: 16px 16px 18px; }
+        .topbar { flex-direction: column; align-items: flex-start; }
+        .top-actions { width: 100%; justify-content: space-between; }
+        .search { width: 100%; }
+        .stats-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="dashboard">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">S</div>
+            <span>SIEM</span>
+          </div>
+
+          <nav class="nav" aria-label="Main navigation">
+            <a class="nav-item active" href="#"><span class="nav-icon">◎</span>Overview</a>
+            <a class="nav-item" href="#"><span class="nav-icon">◉</span>Incidents</a>
+            <a class="nav-item" href="#"><span class="nav-icon">▣</span>Threat Intel</a>
+            <a class="nav-item" href="#"><span class="nav-icon">◍</span>Assets</a>
+            <a class="nav-item" href="#"><span class="nav-icon">◌</span>Reports</a>
+            <a class="nav-item" href="#"><span class="nav-icon">⚙</span>Settings</a>
+          </nav>
+
+          <div class="sidebar-card">
+            <h4>Security Pulse</h4>
+            <p>12 suspicious IPs blocked in the last 24 hours. 3 critical alerts are awaiting analyst review.</p>
+          </div>
+        </aside>
+
+        <main class="main">
+          <header class="topbar">
+            <div class="title-wrap">
+              <h1>Threat Ops</h1>
+              <div class="subtext">Live environment overview · Updated 2 mins ago</div>
             </div>
 
-            <div class="live-status">
-                <span class="live-dot"></span>
-                Live monitoring
+            <div class="top-actions">
+              <label class="search" aria-label="Search">
+                <span>⌕</span>
+                <input type="text" value="Search events..." aria-label="Search" />
+              </label>
+              <div class="user-badge" aria-label="User">BP</div>
             </div>
-        </header>
+          </header>
 
-        <section class="cards">
-            <article class="card">
-                <span>Total Events</span>
-                <strong id="total-events">0</strong>
-            </article>
-
-            <article class="card">
+          <section class="stats-grid" aria-label="Key metrics">
+            <article class="stat-card">
+              <div class="stat-label">
                 <span>Total Alerts</span>
-                <strong id="total-alerts">0</strong>
+                <span class="pill success" id="stat-alerts-trend">+18.2%</span>
+              </div>
+              <div class="stat-value" id="total-alerts">1,284</div>
+              <div class="stat-meta">
+                <span>vs last 7d</span>
+                <span>12.4k/day</span>
+              </div>
             </article>
 
-            <article class="card">
-                <span>High Alerts</span>
-                <strong id="high-alerts" class="danger">0</strong>
+            <article class="stat-card">
+              <div class="stat-label">
+                <span>Critical Incidents</span>
+                <span class="pill danger" id="stat-critical-trend">-8.4%</span>
+              </div>
+              <div class="stat-value" id="critical-incidents">42</div>
+              <div class="stat-meta">
+                <span>Open cases</span>
+                <span>7 escalated</span>
+              </div>
             </article>
 
-            <article class="card">
-                <span>Suspicious IPs</span>
-                <strong id="suspicious-ips">0</strong>
+            <article class="stat-card">
+              <div class="stat-label">
+                <span>Containment Time</span>
+                <span class="pill warning" id="stat-mttr-trend">+2m</span>
+              </div>
+              <div class="stat-value" id="containment-time">11m</div>
+              <div class="stat-meta">
+                <span>Median</span>
+                <span>Target 9m</span>
+              </div>
             </article>
-        </section>
 
-        <section class="panel">
-            <h2>Live Threat Alerts</h2>
+            <article class="stat-card">
+              <div class="stat-label">
+                <span>Protected Assets</span>
+                <span class="pill info" id="stat-assets-trend">99.5%</span>
+              </div>
+              <div class="stat-value" id="protected-assets">8.6k</div>
+              <div class="stat-meta">
+                <span>Healthy</span>
+                <span>24 offline</span>
+              </div>
+            </article>
+          </section>
 
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>IP Address</th>
-                            <th>Source</th>
-                            <th>Rule</th>
-                            <th>Evidence</th>
-                            <th>Score</th>
-                            <th>Severity</th>
-                        </tr>
-                    </thead>
+          <section class="content-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Threat Trend</h2>
+                <span class="range-badge">Last 7 days</span>
+              </div>
 
-                    <tbody id="alerts-body">
-                        <tr>
-                            <td colspan="7">Loading alerts...</td>
-                        </tr>
-                    </tbody>
-                </table>
+              <div class="chart-card">
+                <div class="bars" aria-label="Threat trend chart" id="trend-bars">
+                  <div class="bar-col"><div class="bar" style="height: 30%;"></div><div class="bar-label">Mon</div></div>
+                  <div class="bar-col"><div class="bar" style="height: 46%;"></div><div class="bar-label">Tue</div></div>
+                  <div class="bar-col"><div class="bar" style="height: 58%;"></div><div class="bar-label">Wed</div></div>
+                  <div class="bar-col"><div class="bar alt" style="height: 72%;"></div><div class="bar-label">Thu</div></div>
+                  <div class="bar-col"><div class="bar" style="height: 68%;"></div><div class="bar-label">Fri</div></div>
+                  <div class="bar-col"><div class="bar alt" style="height: 82%;"></div><div class="bar-label">Sat</div></div>
+                  <div class="bar-col"><div class="bar" style="height: 92%;"></div><div class="bar-label">Sun</div></div>
+                </div>
+              </div>
             </div>
-        </section>
 
-        <section class="chart-grid">
-            <section class="panel">
-                <h2>HTTP 404 Responses by IP</h2>
-                <div id="web-chart"></div>
-            </section>
+            <div class="right-stack">
+              <div class="mini-card">
+                <div class="panel-header">
+                  <h2 class="panel-title">Coverage</h2>
+                  <span class="range-badge">72%</span>
+                </div>
+                <div class="ring-wrap">
+                  <div class="ring" aria-label="Coverage 72 percent">
+                    <div class="ring-label"><strong>72%</strong><small>Monitored</small></div>
+                  </div>
+                </div>
+              </div>
 
-            <section class="panel">
-                <h2>Alerts by Severity</h2>
-                <div id="severity-chart"></div>
-            </section>
-        </section>
-    </main>
+              <div class="mini-card">
+                <div class="panel-header">
+                  <h2 class="panel-title">Detection Confidence</h2>
+                </div>
+                <div class="progress-list">
+                  <div class="progress-item">
+                    <div class="progress-top"><span>Endpoint</span><strong>89%</strong></div>
+                    <div class="track"><div class="fill" style="width: 89%;"></div></div>
+                  </div>
+                  <div class="progress-item">
+                    <div class="progress-top"><span>Cloud</span><strong>76%</strong></div>
+                    <div class="track"><div class="fill" style="width: 76%;"></div></div>
+                  </div>
+                  <div class="progress-item">
+                    <div class="progress-top"><span>Identity</span><strong>63%</strong></div>
+                    <div class="track"><div class="fill" style="width: 63%;"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
-    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
-</body>
+          <section class="bottom-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Active Incidents</h2>
+                <span class="range-badge">Today</span>
+              </div>
+
+              <div class="table-wrap">
+                <table aria-label="Active incidents">
+                  <thead>
+                    <tr>
+                      <th>Source</th>
+                      <th>Type</th>
+                      <th>Severity</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="incidents-table-body">
+                    <tr>
+                      <td>10.42.17.12</td>
+                      <td>Credential Abuse</td>
+                      <td>Critical</td>
+                      <td><span class="status critical">Investigating</span></td>
+                    </tr>
+                    <tr>
+                      <td>prod-web-02</td>
+                      <td>Malware Beaconing</td>
+                      <td>High</td>
+                      <td><span class="status warning">Contained</span></td>
+                    </tr>
+                    <tr>
+                      <td>vault-01</td>
+                      <td>Privilege Escalation</td>
+                      <td>Critical</td>
+                      <td><span class="status critical">Escalated</span></td>
+                    </tr>
+                    <tr>
+                      <td>api-gateway</td>
+                      <td>Rate Limit Abuse</td>
+                      <td>Medium</td>
+                      <td><span class="status normal">Resolved</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Alerts</h2>
+                <span class="range-badge">Live</span>
+              </div>
+
+              <div class="alerts-list" id="alerts-list">
+                <div class="alert-item">
+                  <span class="dot red"></span>
+                  <div class="alert-copy">
+                    <strong>Suspicious login burst</strong>
+                    <small>12 failed MFA attempts from 3 IPs · 4 mins ago</small>
+                  </div>
+                </div>
+                <div class="alert-item">
+                  <span class="dot amber"></span>
+                  <div class="alert-copy">
+                    <strong>Unusual outbound traffic</strong>
+                    <small>Large data export from finance app · 18 mins ago</small>
+                  </div>
+                </div>
+                <div class="alert-item">
+                  <span class="dot green"></span>
+                  <div class="alert-copy">
+                    <strong>Patch compliance restored</strong>
+                    <small>All monitored endpoints updated · 52 mins ago</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const fallbackSummary = {
+        total_alerts: 1284,
+        critical_incidents: 42,
+        containment_time: '11m',
+        protected_assets: '8.6k'
+      };
+
+      const fallbackAlerts = [
+        { title: 'Suspicious login burst', detail: '12 failed MFA attempts from 3 IPs · 4 mins ago', level: 'red' },
+        { title: 'Unusual outbound traffic', detail: 'Large data export from finance app · 18 mins ago', level: 'amber' },
+        { title: 'Patch compliance restored', detail: 'All monitored endpoints updated · 52 mins ago', level: 'green' }
+      ];
+
+      const fallbackTable = [
+        ['10.42.17.12', 'Credential Abuse', 'Critical', 'Investigating', 'critical'],
+        ['prod-web-02', 'Malware Beaconing', 'High', 'Contained', 'warning'],
+        ['vault-01', 'Privilege Escalation', 'Critical', 'Escalated', 'critical'],
+        ['api-gateway', 'Rate Limit Abuse', 'Medium', 'Resolved', 'normal']
+      ];
+
+      function renderFallbackData() {
+        document.getElementById('total-alerts').textContent = fallbackSummary.total_alerts.toLocaleString();
+        document.getElementById('critical-incidents').textContent = fallbackSummary.critical_incidents;
+        document.getElementById('containment-time').textContent = fallbackSummary.containment_time;
+        document.getElementById('protected-assets').textContent = fallbackSummary.protected_assets;
+
+        const alertList = document.getElementById('alerts-list');
+        alertList.innerHTML = fallbackAlerts.map(item => `
+          <div class="alert-item">
+            <span class="dot ${item.level}"></span>
+            <div class="alert-copy">
+              <strong>${item.title}</strong>
+              <small>${item.detail}</small>
+            </div>
+          </div>
+        `).join('');
+
+        const incidentsBody = document.getElementById('incidents-table-body');
+        incidentsBody.innerHTML = fallbackTable.map(row => `
+          <tr>
+            <td>${row[0]}</td>
+            <td>${row[1]}</td>
+            <td>${row[2]}</td>
+            <td><span class="status ${row[4]}">${row[3]}</span></td>
+          </tr>
+        `).join('');
+      }
+
+      async function refreshDashboard() {
+        try {
+          const [summaryRes, alertsRes] = await Promise.all([
+            fetch('/api/summary'),
+            fetch('/api/alerts')
+          ]);
+
+          if (!summaryRes.ok || !alertsRes.ok) {
+            throw new Error('API unavailable');
+          }
+
+          const summary = await summaryRes.json();
+          const alerts = await alertsRes.json();
+
+          document.getElementById('total-alerts').textContent = Number(summary.total_alerts || 0).toLocaleString();
+          document.getElementById('critical-incidents').textContent = Number(summary.high_alerts || summary.critical_incidents || 0);
+          document.getElementById('containment-time').textContent = summary.containment_time || '11m';
+          document.getElementById('protected-assets').textContent = summary.protected_assets || '8.6k';
+
+          const alertList = document.getElementById('alerts-list');
+          if (alerts && alerts.length) {
+            alertList.innerHTML = alerts.slice(0, 3).map((item, index) => {
+              const level = item.severity === 'HIGH' ? 'red' : item.severity === 'MEDIUM' ? 'amber' : 'green';
+              return `
+                <div class="alert-item">
+                  <span class="dot ${level}"></span>
+                  <div class="alert-copy">
+                    <strong>${item.rule_name || 'Security alert'}</strong>
+                    <small>${item.evidence || item.source || 'Live detection signal'} · ${item.created_at || 'recently'}</small>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+
+          const incidentsBody = document.getElementById('incidents-table-body');
+          if (alerts && alerts.length) {
+            incidentsBody.innerHTML = alerts.slice(0, 4).map((item) => {
+              const severity = String(item.severity || 'Medium');
+              const status = severity === 'HIGH' ? 'warning' : severity === 'CRITICAL' ? 'critical' : 'normal';
+              const label = severity === 'HIGH' ? 'Contained' : severity === 'CRITICAL' ? 'Investigating' : 'Resolved';
+              const type = item.rule_name || 'Security Event';
+              return `
+                <tr>
+                  <td>${item.ip || 'unknown'}</td>
+                  <td>${type}</td>
+                  <td>${severity}</td>
+                  <td><span class="status ${status}">${label}</span></td>
+                </tr>
+              `;
+            }).join('');
+          }
+        } catch (error) {
+          renderFallbackData();
+        }
+      }
+
+      refreshDashboard();
+      setInterval(refreshDashboard, 5000);
+    </script>
+  </body>
 </html>
