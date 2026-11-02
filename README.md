@@ -520,16 +520,6 @@ This is an **educational Mini-SIEM implementation**. It does not attempt to repr
 
 ---
 
-## 🎓 Academic Project Info
-
-**Program:** B.Tech Cyber Security
-**Semester:** VII
-**Project:** Mini-SIEM — Log Analysis & Threat Detection Dashboard
-
-Built for educational and authorized cybersecurity research purposes only.
-
----
-
 ## 📄 License
 
 This project is released under the [MIT License](LICENSE) (or the license your team selects).
