@@ -495,7 +495,7 @@ feature/dashboard-bhanu
 feature/testing-vikash
 ```
 
-> ⚠️ No direct pushes to `main`. All merges require review from the Integration Lead (Abhay) and QA/Release Lead (Vikash).
+> ⚠️ No direct pushes to `main`. All merges require review
 
 ---
 
